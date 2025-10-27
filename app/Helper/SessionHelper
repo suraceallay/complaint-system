@@ -1,0 +1,52 @@
+<?php
+
+namespace App\Helpers;
+
+use App\Models\User;
+use Laravel\Sanctum\PersonalAccessToken;
+
+class SessionHelper
+{
+    /**
+     * Get current active sessions for user
+     */
+    public static function getActiveSessions(User $user)
+    {
+        return $user->tokens()
+            ->where('expires_at', '>', now())
+            ->orderBy('last_used_at', 'desc')
+            ->get();
+    }
+
+    /**
+     * Revoke all sessions except current
+     */
+    public static function revokeOtherSessions(User $user, $currentTokenId)
+    {
+        return $user->tokens()
+            ->where('id', '!=', $currentTokenId)
+            ->delete();
+    }
+
+    /**
+     * Revoke specific session
+     */
+    public static function revokeSession(User $user, $tokenId)
+    {
+        return $user->tokens()->where('id', $tokenId)->delete();
+    }
+
+    /**
+     * Check if session is valid
+     */
+    public static function isValidSession($token)
+    {
+        $accessToken = PersonalAccessToken::findToken($token);
+        
+        if (!$accessToken) {
+            return false;
+        }
+
+        return !$accessToken->expires_at || $accessToken->expires_at->isFuture();
+    }
+}
